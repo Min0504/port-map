@@ -103,11 +103,15 @@ def main() -> None:
     })
     url = f"http://127.0.0.1:{actual_port}/?{qp}"
 
+    # width/height가 0이면 기본값 사용 (이전 실행에서 0이 저장된 경우 방지)
+    win_w = cfg["width"] if cfg["width"] and cfg["width"] > 100 else 320
+    win_h = cfg["height"] if cfg["height"] and cfg["height"] > 100 else 480
+
     window = webview.create_window(
         title="Port Map",
         url=url,
-        width=cfg["width"],
-        height=cfg["height"],
+        width=win_w,
+        height=win_h,
         x=cfg["x"],
         y=cfg["y"],
         resizable=True,
@@ -127,8 +131,11 @@ def main() -> None:
             geom = window.evaluate_js(
                 "[window.screenX, window.screenY, window.outerWidth, window.outerHeight]")
             if geom and len(geom) == 4:
+                gw, gh = int(geom[2]), int(geom[3])
                 new_cfg["x"], new_cfg["y"] = int(geom[0]), int(geom[1])
-                new_cfg["width"], new_cfg["height"] = int(geom[2]), int(geom[3])
+                # 0이거나 너무 작으면 저장하지 않음 (frameless 창에서 evaluate_js가 0 반환하는 문제)
+                if gw > 100 and gh > 100:
+                    new_cfg["width"], new_cfg["height"] = gw, gh
             save_config(new_cfg)
         except Exception:
             pass
@@ -207,8 +214,10 @@ def main() -> None:
             geom = window.evaluate_js(
                 "[window.screenX, window.screenY, window.outerWidth, window.outerHeight]")
             if geom and len(geom) == 4:
+                gw, gh = int(geom[2]), int(geom[3])
                 new_cfg["x"], new_cfg["y"] = int(geom[0]), int(geom[1])
-                new_cfg["width"], new_cfg["height"] = int(geom[2]), int(geom[3])
+                if gw > 100 and gh > 100:
+                    new_cfg["width"], new_cfg["height"] = gw, gh
             save_config(new_cfg)
         except Exception:
             pass
