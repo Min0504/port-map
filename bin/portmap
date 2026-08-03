@@ -59,6 +59,10 @@ for p in snap['ports']:
 print(f'--- {snap[\"count\"]} ports ({snap[\"scanner\"]}) ---')
 "
         ;;
+    build)
+        # PyInstaller 빌드
+        exec "$PROJECT_DIR/build.sh" "$@"
+        ;;
     kill)
         shift
         if [ -z "$1" ]; then
@@ -85,6 +89,7 @@ Port Map — 로컬 포트 점유 현황 데스크톱 위젯
   portmap                    위젯 실행 (기본 설정)
   portmap ports              포트 목록만 터미널에 출력 (CLI)
   portmap kill <PID>         프로세스 종료 (CLI, 위젯 불필요)
+  portmap build              PyInstaller 빌드 실행
 
 옵션:
   --interval <초>            폴링 주기 (1~30, 기본 3)
@@ -101,6 +106,7 @@ Port Map — 로컬 포트 점유 현황 데스크톱 위젯
   portmap --interval 5 --theme light
   portmap ports
   portmap kill 12345
+  portmap build
 
 프로젝트: https://github.com/Min0504/port-map
 HELP
