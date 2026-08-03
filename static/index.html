@@ -191,30 +191,44 @@
     font-size: 10px; padding: 3px 8px; border-radius: 6px;
     margin-bottom: 6px; text-align: center; display: none;
   }
-  /* 꺼진 포트 섹션 */
-  .closed-toggle {
-    display: flex; align-items: center; gap: 6px;
-    padding: 5px 10px; margin-bottom: 4px;
-    background: rgba(255,255,255,0.04); border-radius: 6px;
-    font-size: 11px; color: var(--dim); cursor: pointer;
+  /* 탭 바 */
+  .tab-bar {
+    display: flex; gap: 0; margin-bottom: 8px;
+    border-radius: 8px; overflow: hidden;
+    background: rgba(255,255,255,0.04);
+  }
+  :root[data-theme="light"] .tab-bar { background: rgba(0,0,0,0.04); }
+  .tab {
+    flex: 1; padding: 7px 0; text-align: center;
+    font-size: 11px; font-weight: 600; color: var(--dim);
+    cursor: pointer; border: none; background: none;
+    transition: background 0.15s, color 0.15s;
     user-select: none; -webkit-user-select: none;
+    border-bottom: 2px solid transparent;
   }
-  :root[data-theme="light"] .closed-toggle { background: rgba(0,0,0,0.04); }
-  .closed-toggle:hover { background: rgba(255,255,255,0.08); }
-  .closed-toggle .arrow { transition: transform 0.2s; }
-  .closed-toggle.open .arrow { transform: rotate(90deg); }
-  .closed-toggle .badge-count {
-    margin-left: auto; background: rgba(224,80,80,0.15); color: var(--err);
-    padding: 1px 6px; border-radius: 8px; font-size: 10px; font-weight: 600;
+  .tab:hover { color: var(--text); }
+  .tab.active {
+    color: var(--accent);
+    background: rgba(91,157,255,0.1);
+    border-bottom-color: var(--accent);
   }
-  .closed-list { display: none; }
-  .closed-list.open { display: flex; flex-direction: column; gap: 4px; margin-bottom: 6px; }
+  .tab .tab-count {
+    display: inline-block; margin-left: 4px;
+    font-size: 9px; padding: 0 5px; border-radius: 8px;
+    background: rgba(255,255,255,0.08); color: var(--dim);
+  }
+  .tab.active .tab-count {
+    background: rgba(91,157,255,0.2); color: var(--accent);
+  }
+  .tab-panel { display: none; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 4px; }
+  /* 꺼진 포트 카드 */
   .closed-card {
-    background: rgba(30,32,38,0.6); border-radius: 7px;
-    padding: 6px 10px; border: 1px solid rgba(255,255,255,0.04);
-    opacity: 0.6;
+    background: var(--card); border-radius: 7px;
+    padding: 6px 10px; border: 1px solid transparent;
+    opacity: 0.7; transition: opacity 0.2s;
   }
-  :root[data-theme="light"] .closed-card { background: rgba(240,240,245,0.6); border-color: rgba(0,0,0,0.04); }
+  .closed-card:hover { opacity: 0.9; border-color: rgba(255,255,255,0.06); }
   .closed-card .card-head { display: flex; align-items: center; gap: 6px; }
   .closed-card .card-port { font-weight: 700; font-size: 13px; color: var(--dim); min-width: 48px; font-variant-numeric: tabular-nums; }
   .closed-card .card-proc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; color: var(--dim); }
@@ -244,15 +258,23 @@
 </div>
 <div id="container">
   <div class="warn-bar" id="warn-bar">스캐너 확인 필요 — 연속 실패</div>
-  <div id="closed-toggle" class="closed-toggle">
-    <span class="arrow">▸</span>
-    <span>최근 사용된 포트</span>
-    <span class="badge-count" id="closed-count">0</span>
+  <div class="tab-bar">
+    <button class="tab active" id="tab-active" data-tab="active">
+      사용 중 <span class="tab-count" id="active-count">0</span>
+    </button>
+    <button class="tab" id="tab-closed" data-tab="closed">
+      최근 사용 <span class="tab-count" id="closed-count">0</span>
+    </button>
   </div>
-  <div id="closed-list" class="closed-list"></div>
   <input id="search" type="text" placeholder="포트 또는 프로세스명..." spellcheck="false">
-  <div id="grid"></div>
-  <div id="status-msg" style="display:none"></div>
+  <div id="tab-panel-active" class="tab-panel active">
+    <div id="grid"></div>
+    <div id="status-msg" style="display:none"></div>
+  </div>
+  <div id="tab-panel-closed" class="tab-panel">
+    <div id="closed-grid"></div>
+    <div id="closed-status" style="text-align:center;color:var(--dim);padding:40px 10px;font-size:12px;">최근 사용된 포트 없음</div>
+  </div>
 </div>
 <div id="toast"></div>
 <script>
@@ -272,10 +294,10 @@ let expandedSet = new Set();
 let searchQuery = '';
 let scanInProgress = false;
 let failCount = 0;
-let closedListOpen = false;
 let favorites = new Set();    // 고정할 포트 번호
 let prevPortKeys = new Set(); // 이전 스캔의 포트 키 (새 포트 감지용)
 let currentTheme = THEME;
+let activeTab = 'active';     // 'active' | 'closed'
 
 const grid = document.getElementById('grid');
 const statusMsg = document.getElementById('status-msg');
@@ -283,9 +305,14 @@ const countEl = document.getElementById('count');
 const searchEl = document.getElementById('search');
 const warnBar = document.getElementById('warn-bar');
 const statusDot = document.getElementById('status-dot');
-const closedToggle = document.getElementById('closed-toggle');
-const closedListEl = document.getElementById('closed-list');
+const closedGrid = document.getElementById('closed-grid');
+const closedStatus = document.getElementById('closed-status');
+const activeCountEl = document.getElementById('active-count');
 const closedCountEl = document.getElementById('closed-count');
+const tabActive = document.getElementById('tab-active');
+const tabClosed = document.getElementById('tab-closed');
+const panelActive = document.getElementById('tab-panel-active');
+const panelClosed = document.getElementById('tab-panel-closed');
 const toastEl = document.getElementById('toast');
 
 // 창 제어 버튼
@@ -321,25 +348,37 @@ document.getElementById('btn-theme').addEventListener('click', () => {
   showToast(currentTheme === 'dark' ? '다크 테마' : '라이트 테마');
 });
 
-closedToggle.addEventListener('click', () => {
-  closedListOpen = !closedListOpen;
-  closedToggle.classList.toggle('open', closedListOpen);
-  closedListEl.classList.toggle('open', closedListOpen);
-});
+// 탭 전환
+tabActive.addEventListener('click', () => switchTab('active'));
+tabClosed.addEventListener('click', () => switchTab('closed'));
+
+function switchTab(tab) {
+  activeTab = tab;
+  tabActive.classList.toggle('active', tab === 'active');
+  tabClosed.classList.toggle('active', tab === 'closed');
+  panelActive.classList.toggle('active', tab === 'active');
+  panelClosed.classList.toggle('active', tab === 'closed');
+  applyFilter();
+}
 
 searchEl.addEventListener('input', () => {
   searchQuery = searchEl.value.trim().toLowerCase();
   applyFilter();
 });
 
+let lastClosedPorts = [];
+
 function applyFilter() {
-  document.querySelectorAll('.card').forEach(card => {
+  // 활성 탭의 카드 필터
+  document.querySelectorAll('#grid .card').forEach(card => {
     const port = card.dataset.port;
     const proc = card.dataset.proc;
     const match = !searchQuery ||
       port.includes(searchQuery) || proc.toLowerCase().includes(searchQuery);
     card.style.display = match ? '' : 'none';
   });
+  // 꺼진 탭도 같은 검색어로 필터
+  renderClosed(lastClosedPorts);
 }
 
 function cardKey(p) {
@@ -482,6 +521,7 @@ function render(snapshot) {
   }
 
   countEl.textContent = ports.length;
+  activeCountEl.textContent = ports.length;
   if (ports.length === 0) {
     statusMsg.style.display = '';
     statusMsg.className = '';
@@ -495,14 +535,28 @@ function render(snapshot) {
 }
 
 function renderClosed(closedPorts) {
+  lastClosedPorts = closedPorts || [];
   closedCountEl.textContent = closedPorts.length;
   if (closedPorts.length === 0) {
-    closedToggle.style.display = 'none';
-    closedListEl.innerHTML = '';
+    closedStatus.style.display = '';
+    closedStatus.textContent = '최근 사용된 포트 없음';
+    closedGrid.innerHTML = '';
     return;
   }
-  closedToggle.style.display = '';
-  closedListEl.innerHTML = closedPorts.map(p => {
+  closedStatus.style.display = 'none';
+  // 검색 필터 적용
+  const filtered = closedPorts.filter(p => {
+    if (!searchQuery) return true;
+    return String(p.port).includes(searchQuery) ||
+           p.process.toLowerCase().includes(searchQuery);
+  });
+  if (filtered.length === 0) {
+    closedStatus.style.display = '';
+    closedStatus.textContent = '검색 결과 없음';
+    closedGrid.innerHTML = '';
+    return;
+  }
+  closedGrid.innerHTML = filtered.map(p => {
     const ago = timeAgo(p.last_seen);
     return `
       <div class="closed-card">
