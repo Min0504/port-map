@@ -326,7 +326,21 @@ function applyFilter() {
   });
 }
 
-function cardKey(p) { return `${p.port}:${p.family}`; }
+function cardKey(p) {
+  // 같은 포트+PID면 IPv4/IPv6을 하나로 합침 (PID가 있을 때만)
+  if (p.pid) return `${p.port}:${p.pid}`;
+  return `${p.port}:${p.family}`;
+}
+
+function portFamilies(ports) {
+  // 같은 cardKey로 들어온 포트들의 family 정보 수집
+  const fams = new Set();
+  ports.forEach(p => {
+    const k = cardKey(p);
+    // 원래 family 기록 — 합쳐진 카드에 v4+v6 표시용
+  });
+  return fams;
+}
 
 function showToast(msg) {
   toastEl.textContent = msg;
@@ -384,7 +398,21 @@ function render(snapshot) {
   warnBar.style.display = 'none';
   statusMsg.style.display = 'none';
 
-  const ports = snapshot.ports || [];
+  const rawPorts = snapshot.ports || [];
+
+  // 같은 (포트, PID)인 포트들을 하나로 합침 — family 정보는 families 배열로 수집
+  const merged = new Map();
+  for (const p of rawPorts) {
+    const key = cardKey(p);
+    if (merged.has(key)) {
+      const existing = merged.get(key);
+      if (!existing.families.includes(p.family)) existing.families.push(p.family);
+    } else {
+      merged.set(key, {...p, families: [p.family]});
+    }
+  }
+  const ports = [...merged.values()];
+
   const newKeys = new Set(ports.map(cardKey));
 
   // 새 포트 감지 (이전에 없던 포트)
@@ -513,7 +541,9 @@ function updateCard(el, p) {
   if (isPinned) el.classList.add('pinned');
   else el.classList.remove('pinned');
   const protoBadge = `<span class="badge ${p.protocol}">${p.protocol}</span>`;
-  const famBadge = p.family === 'ipv6' ? `<span class="badge ipv6">v6</span>` : '';
+  const fams = p.families || [p.family];
+  const famBadge = fams.length > 1 ? `<span class="badge ipv6">v4+v6</span>` :
+    fams[0] === 'ipv6' ? `<span class="badge ipv6">v6</span>` : '';
   const permBadge = p.permission === 'full' ? '' :
     `<span class="badge ${p.permission}">${p.permission === 'denied' ? '권한부족' : '제한'}</span>`;
   const pinBtn = `<button class="pin-btn" onclick="togglePin(${p.port}, event)" title="고정">${isPinned ? '📌' : '○'}</button>`;
