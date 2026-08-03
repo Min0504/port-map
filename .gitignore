@@ -1,0 +1,8 @@
+pywebview/
+psutil/
+__pycache__/
+*.pyc
+dist/
+build/
+.spec/
+.DS_Store
