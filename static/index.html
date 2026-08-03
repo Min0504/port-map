@@ -6,8 +6,9 @@
 <title>Port Map</title>
 <style>
   :root {
-    --bg: rgba(20, 22, 28, 0.85);
-    --card: rgba(40, 44, 52, 0.9);
+    --bg: rgba(20, 22, 28, 0.88);
+    --card: rgba(40, 44, 52, 0.92);
+    --card-hover: rgba(50, 55, 64, 0.95);
     --text: #e4e6eb;
     --dim: #8b8f96;
     --accent: #5b9dff;
@@ -16,140 +17,152 @@
     --ok: #50c878;
   }
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
   body {
-    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", sans-serif;
+    font-family: -apple-system, "SF Pro Text", "Helvetica Neue", "Segoe UI", sans-serif;
     background: transparent;
     color: var(--text);
     font-size: 13px;
     user-select: none;
     -webkit-user-select: none;
     overflow: hidden;
+    border-radius: 12px;
   }
-  /* 드래그 핸들 (상단 28px) */
+  /* 드래그 핸들 — 이 영역만 창 이동 가능 */
   #drag-handle {
-    height: 28px;
+    height: 30px;
     background: var(--bg);
     -webkit-app-region: drag;
     app-region: drag;
     cursor: grab;
     display: flex;
     align-items: center;
-    padding: 0 10px;
-    border-radius: 10px 10px 0 0;
+    padding: 0 12px;
+    border-radius: 12px 12px 0 0;
+    gap: 8px;
   }
   #drag-handle:active { cursor: grabbing; }
-  #drag-handle .title { font-weight: 600; font-size: 12px; }
-  #drag-handle .count { margin-left: auto; color: var(--dim); font-size: 11px; }
+  #drag-handle .title { font-weight: 700; font-size: 12px; letter-spacing: 0.3px; }
+  #drag-handle .count {
+    margin-left: auto; color: var(--dim); font-size: 11px;
+    background: rgba(255,255,255,0.06); padding: 1px 7px; border-radius: 8px;
+  }
+  #drag-handle .dot {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
+  }
+  #drag-handle .dot.err { background: var(--err); }
+  #drag-handle .dot.warn { background: var(--warn); }
   #container {
     background: var(--bg);
-    border-radius: 0 0 10px 10px;
+    border-radius: 0 0 12px 12px;
     padding: 8px;
-    height: calc(100vh - 28px);
+    height: calc(100vh - 30px);
     display: flex;
     flex-direction: column;
   }
   #search {
     width: 100%;
-    padding: 6px 10px;
+    padding: 7px 12px;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
-    background: rgba(255,255,255,0.05);
+    background: rgba(255,255,255,0.06);
     color: var(--text);
     font-size: 12px;
     margin-bottom: 8px;
+    transition: border-color 0.2s;
   }
   #search:focus { outline: none; border-color: var(--accent); }
+  #search::placeholder { color: var(--dim); }
   #grid {
     flex: 1;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
     gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
   }
+  #grid::-webkit-scrollbar { width: 4px; }
+  #grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
   .card {
     background: var(--card);
     border-radius: 8px;
     padding: 8px 10px;
     cursor: pointer;
-    transition: opacity 0.3s, background 0.2s;
+    transition: background 0.15s, opacity 0.3s, border-color 0.15s;
     border: 1px solid transparent;
   }
-  .card:hover { border-color: rgba(91,157,255,0.3); }
-  .card.new { animation: fadeIn 0.3s; }
-  .card.gone { opacity: 0; pointer-events: none; }
+  .card:hover { background: var(--card-hover); border-color: rgba(91,157,255,0.25); }
+  .card.new { animation: fadeIn 0.3s ease; }
+  .card.gone { opacity: 0; pointer-events: none; transform: scale(0.95); }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
-  .card-head {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  .card-head { display: flex; align-items: center; gap: 6px; }
+  .card-port {
+    font-weight: 700; font-size: 14px; color: var(--accent);
+    min-width: 48px; font-variant-numeric: tabular-nums;
   }
-  .card-port { font-weight: 700; font-size: 14px; color: var(--accent); min-width: 52px; }
-  .card-proc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .badge {
-    font-size: 9px;
-    padding: 1px 5px;
-    border-radius: 4px;
-    font-weight: 600;
-  }
-  .badge.tcp { background: rgba(91,157,255,0.2); color: var(--accent); }
-  .badge.udp { background: rgba(80,200,120,0.2); color: var(--ok); }
-  .badge.denied { background: rgba(224,80,80,0.2); color: var(--err); }
-  .badge.limited { background: rgba(240,160,64,0.2); color: var(--warn); }
+  .card-proc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
+  .badge { font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
+  .badge.tcp { background: rgba(91,157,255,0.18); color: var(--accent); }
+  .badge.udp { background: rgba(80,200,120,0.18); color: var(--ok); }
+  .badge.ipv6 { background: rgba(180,140,220,0.18); color: #b48cdc; }
+  .badge.denied { background: rgba(224,80,80,0.18); color: var(--err); }
+  .badge.limited { background: rgba(240,160,64,0.18); color: var(--warn); }
   .card-detail {
-    margin-top: 6px;
-    padding-top: 6px;
+    margin-top: 6px; padding-top: 6px;
     border-top: 1px solid rgba(255,255,255,0.08);
-    font-size: 11px;
-    color: var(--dim);
-    display: none;
+    font-size: 11px; color: var(--dim);
+    display: none; line-height: 1.5;
   }
   .card.expanded .card-detail { display: block; }
-  .card-detail .row { margin: 2px 0; word-break: break-all; }
-  .card-detail .label { color: var(--dim); }
+  .card-detail .row { word-break: break-all; }
+  .card-detail .label { color: var(--dim); display: inline-block; min-width: 52px; }
   .card-detail .val { color: var(--text); }
-  #empty, #error {
-    text-align: center;
-    color: var(--dim);
-    padding: 40px 10px;
-    font-size: 12px;
+  #status-msg {
+    text-align: center; color: var(--dim);
+    padding: 40px 10px; font-size: 12px;
   }
-  #error { color: var(--err); }
-  .warn-badge {
-    background: var(--warn);
-    color: #1a1a1a;
-    font-size: 10px;
-    padding: 2px 6px;
-    border-radius: 4px;
-    margin-bottom: 6px;
-    display: none;
+  #status-msg.error { color: var(--err); }
+  #status-msg .retry { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  .warn-bar {
+    background: rgba(240,160,64,0.15); color: var(--warn);
+    font-size: 10px; padding: 3px 8px; border-radius: 6px;
+    margin-bottom: 6px; text-align: center; display: none;
   }
 </style>
 </head>
 <body>
 <div id="drag-handle">
+  <span class="dot" id="status-dot"></span>
   <span class="title">Port Map</span>
   <span class="count" id="count">0</span>
 </div>
 <div id="container">
-  <div class="warn-badge" id="warn-badge">스캐너 확인 필요</div>
-  <input id="search" type="text" placeholder="포트번호 또는 프로세스명..." spellcheck="false">
+  <div class="warn-bar" id="warn-bar">스캐너 확인 필요 — 연속 실패</div>
+  <input id="search" type="text" placeholder="포트 또는 프로세스명..." spellcheck="false">
   <div id="grid"></div>
-  <div id="empty" style="display:none">점유 중인 포트 없음</div>
-  <div id="error" style="display:none"></div>
+  <div id="status-msg" style="display:none"></div>
 </div>
 <script>
-const POLL_INTERVAL = new URLSearchParams(location.search).get('interval') || 3;
-let lastPorts = new Map();  // port:family -> card data
-let expandedSet = new Set(); // "port:family" keys that are expanded
+const params = new URLSearchParams(location.search);
+const POLL_INTERVAL = parseInt(params.get('interval') || '3');
+const OPACITY = parseFloat(params.get('opacity') || '0.88');
+
+// 배경 투명도 적용
+document.documentElement.style.setProperty('--bg', `rgba(20,22,28,${OPACITY})`);
+
+let lastPorts = new Map();      // key -> card element
+let expandedSet = new Set();     // expanded "port:family" keys
 let searchQuery = '';
 let scanInProgress = false;
+let failCount = 0;
 
 const grid = document.getElementById('grid');
-const emptyEl = document.getElementById('empty');
-const errorEl = document.getElementById('error');
+const statusMsg = document.getElementById('status-msg');
 const countEl = document.getElementById('count');
 const searchEl = document.getElementById('search');
-const warnBadge = document.getElementById('warn-badge');
+const warnBar = document.getElementById('warn-bar');
+const statusDot = document.getElementById('status-dot');
 
 searchEl.addEventListener('input', () => {
   searchQuery = searchEl.value.trim().toLowerCase();
@@ -169,6 +182,23 @@ function applyFilter() {
 function cardKey(p) { return `${p.port}:${p.family}`; }
 
 function render(snapshot) {
+  if (snapshot.error) {
+    failCount++;
+    statusDot.className = 'dot err';
+    if (failCount >= 3) {
+      warnBar.style.display = '';
+      statusMsg.style.display = '';
+      statusMsg.className = 'error';
+      statusMsg.innerHTML = `스캔 실패: ${escapeHtml(snapshot.error)} <span class="retry" onclick="poll()">재시도</span>`;
+    }
+    return;
+  }
+
+  failCount = 0;
+  statusDot.className = 'dot';
+  warnBar.style.display = 'none';
+  statusMsg.style.display = 'none';
+
   const ports = snapshot.ports || [];
   const newKeys = new Set(ports.map(cardKey));
 
@@ -176,7 +206,8 @@ function render(snapshot) {
   for (const [key, el] of lastPorts) {
     if (!newKeys.has(key)) {
       el.classList.add('gone');
-      setTimeout(() => el.remove(), 300);
+      const toRemove = el;
+      setTimeout(() => toRemove.remove(), 300);
       lastPorts.delete(key);
       expandedSet.delete(key);
     }
@@ -196,23 +227,23 @@ function render(snapshot) {
     }
   }
 
-  // 카운트/빈 상태
   countEl.textContent = ports.length;
-  emptyEl.style.display = ports.length === 0 && !snapshot.error ? '' : 'none';
-  errorEl.style.display = snapshot.error ? '' : 'none';
-  if (snapshot.error) errorEl.textContent = '스캔 실패: ' + snapshot.error;
-  warnBadge.style.display = snapshot.error ? '' : 'none';
-
+  if (ports.length === 0) {
+    statusMsg.style.display = '';
+    statusMsg.className = '';
+    statusMsg.textContent = '점유 중인 포트 없음';
+  } else {
+    statusMsg.style.display = 'none';
+  }
   applyFilter();
 }
 
 function createCard(p) {
   const el = document.createElement('div');
   el.className = 'card';
-  el.dataset.port = String(p.port);
-  el.dataset.proc = p.process;
   updateCard(el, p);
-  el.addEventListener('dblclick', () => {
+  el.addEventListener('dblclick', (e) => {
+    e.stopPropagation();
     const key = cardKey(p);
     if (expandedSet.has(key)) {
       expandedSet.delete(key);
@@ -221,14 +252,17 @@ function createCard(p) {
       expandedSet.add(key);
       el.classList.add('expanded');
     }
+    updateCard(el, p);
   });
   return el;
 }
 
 function updateCard(el, p) {
   const key = cardKey(p);
+  el.dataset.port = String(p.port);
   el.dataset.proc = p.process;
   const protoBadge = `<span class="badge ${p.protocol}">${p.protocol}</span>`;
+  const famBadge = p.family === 'ipv6' ? `<span class="badge ipv6">v6</span>` : '';
   const permBadge = p.permission === 'full' ? '' :
     `<span class="badge ${p.permission}">${p.permission === 'denied' ? '권한부족' : '제한'}</span>`;
   const detail = expandedSet.has(key) ? buildDetail(p) : '';
@@ -236,7 +270,7 @@ function updateCard(el, p) {
     <div class="card-head">
       <span class="card-port">${p.port}</span>
       <span class="card-proc">${escapeHtml(p.process)}</span>
-      ${protoBadge}${permBadge}
+      ${protoBadge}${famBadge}${permBadge}
     </div>
     <div class="card-detail">${detail}</div>
   `;
@@ -244,11 +278,12 @@ function updateCard(el, p) {
 }
 
 function buildDetail(p) {
+  const cmd = p.cmdline ? escapeHtml(p.cmdline) : '<span style="color:var(--err)">(권한 부족)</span>';
   return `
-    <div class="row"><span class="label">PID: </span><span class="val">${p.pid ?? '?'}</span></div>
-    <div class="row"><span class="label">cmd: </span><span class="val">${escapeHtml(p.cmdline || '(권한 부족)')}</span></div>
-    <div class="row"><span class="label">remote: </span><span class="val">${p.remote || '—'}</span></div>
-    <div class="row"><span class="label">family: </span><span class="val">${p.family}</span></div>
+    <div class="row"><span class="label">PID</span><span class="val">${p.pid ?? '?'}</span></div>
+    <div class="row"><span class="label">명령어</span><span class="val">${cmd}</span></div>
+    <div class="row"><span class="label">원격</span><span class="val">${p.remote || '—'}</span></div>
+    <div class="row"><span class="label">상태</span><span class="val">${p.state}</span></div>
   `;
 }
 
@@ -262,12 +297,16 @@ async function poll() {
   if (scanInProgress) return;
   scanInProgress = true;
   try {
-    const r = await fetch('/api/ports');
+    const r = await fetch('/api/ports', { cache: 'no-store' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const data = await r.json();
     render(data);
   } catch (e) {
-    errorEl.style.display = '';
-    errorEl.textContent = '서버 연결 실패';
+    failCount++;
+    statusDot.className = 'dot err';
+    statusMsg.style.display = '';
+    statusMsg.className = 'error';
+    statusMsg.innerHTML = `서버 연결 실패 <span class="retry" onclick="poll()">재시도</span>`;
   } finally {
     scanInProgress = false;
   }

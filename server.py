@@ -16,7 +16,11 @@ from typing import Any
 
 from scanners import scan as scan_ports
 
-STATIC_DIR = Path(__file__).parent / "static"
+# PyInstaller 번들(sys._MEIPASS)과 일반 실행 모두 지원
+if hasattr(sys, "_MEIPASS"):
+    STATIC_DIR = Path(sys._MEIPASS) / "static"
+else:
+    STATIC_DIR = Path(__file__).parent / "static"
 _last_snapshot: dict[str, Any] | None = None
 _fail_count = 0
 
