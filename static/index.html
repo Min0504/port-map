@@ -85,6 +85,7 @@
   #grid::-webkit-scrollbar { width: 4px; }
   #grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
   .card {
+    cursor: pointer;  /* 싱글클릭으로 확장/접기 */
     background: var(--card);
     border-radius: 8px;
     padding: 8px 10px;
@@ -256,8 +257,9 @@ function createCard(p) {
   const el = document.createElement('div');
   el.className = 'card';
   updateCard(el, p);
-  el.addEventListener('dblclick', (e) => {
-    e.stopPropagation();
+  el.addEventListener('click', (e) => {
+    // 검색창 클릭은 무시
+    if (e.target.tagName === 'INPUT') return;
     const key = cardKey(p);
     if (expandedSet.has(key)) {
       expandedSet.delete(key);
