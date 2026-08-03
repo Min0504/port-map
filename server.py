@@ -38,11 +38,13 @@ class Handler(BaseHTTPRequestHandler):
         pass  # 로그 억제 (위젯 도구)
 
     def do_GET(self) -> None:
-        if self.path == "/api/ports":
+        # query string 분리 (예: /?interval=3&opacity=0.85 -> /)
+        path = self.path.split("?", 1)[0]
+        if path == "/api/ports":
             self._serve_ports()
-        elif self.path == "/api/health":
+        elif path == "/api/health":
             self._serve_health()
-        elif self.path == "/" or self.path == "/index.html":
+        elif path == "/" or path == "/index.html":
             self._serve_static("index.html", "text/html")
         else:
             self.send_error(404)
