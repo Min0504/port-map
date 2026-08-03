@@ -49,6 +49,13 @@ class Handler(BaseHTTPRequestHandler):
         else:
             self.send_error(404)
 
+    def do_POST(self) -> None:
+        path = self.path.split("?", 1)[0]
+        if path == "/api/kill":
+            self._handle_kill()
+        else:
+            self.send_error(404)
+
     def _serve_ports(self) -> None:
         global _last_snapshot, _fail_count
         try:
@@ -99,6 +106,43 @@ class Handler(BaseHTTPRequestHandler):
             self.wfile.write(body)
         except BrokenPipeError:
             pass
+
+    def _handle_kill(self) -> None:
+        """포트 점유 프로세스 종료. PID 정수 검증 후 os.kill 직접 호출.
+
+        보안: shell=True 금지, PID는 반드시 정수. 명령어 주입 방지.
+        """
+        import os
+        import signal
+        try:
+            length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(length) if length else b"{}"
+            data = json.loads(body)
+        except (json.JSONDecodeError, ValueError):
+            self._json({"ok": False, "error": "invalid_json"})
+            return
+
+        pid = data.get("pid")
+        # PID 정수 검증 — 문자열/객체 거부 (주입 방지)
+        if not isinstance(pid, int) or pid <= 0:
+            self._json({"ok": False, "error": "invalid_pid"})
+            return
+
+        # 자기 자신은 kill 금지
+        if pid == self.server_pid:
+            self._json({"ok": False, "error": "cannot_kill_self"})
+            return
+
+        try:
+            os.kill(pid, signal.SIGTERM)
+            self._json({"ok": True, "pid": pid})
+        except ProcessLookupError:
+            self._json({"ok": False, "error": "process_not_found"})
+        except PermissionError:
+            self._json({"ok": False, "error": "permission_denied",
+                        "hint": "sudo 또는 관리자 권한 필요"})
+        except OSError as exc:
+            self._json({"ok": False, "error": f"os_error: {exc}"})
 
 
 class PortMapServer:

@@ -118,6 +118,20 @@
   .card-detail .row { word-break: break-all; }
   .card-detail .label { color: var(--dim); display: inline-block; min-width: 52px; }
   .card-detail .val { color: var(--text); }
+  .kill-btn {
+    margin-top: 8px; padding: 4px 12px;
+    background: rgba(224,80,80,0.15); color: var(--err);
+    border: 1px solid rgba(224,80,80,0.3); border-radius: 6px;
+    font-size: 11px; font-weight: 600; cursor: pointer;
+    transition: background 0.15s;
+  }
+  .kill-btn:hover { background: rgba(224,80,80,0.3); }
+  .kill-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .kill-result {
+    margin-top: 4px; font-size: 10px; font-weight: 600;
+  }
+  .kill-result.ok { color: var(--ok); }
+  .kill-result.err { color: var(--err); }
   #status-msg {
     text-align: center; color: var(--dim);
     padding: 40px 10px; font-size: 12px;
@@ -279,12 +293,44 @@ function updateCard(el, p) {
 
 function buildDetail(p) {
   const cmd = p.cmdline ? escapeHtml(p.cmdline) : '<span style="color:var(--err)">(권한 부족)</span>';
+  const killBtn = p.pid ? `
+    <button class="kill-btn" onclick="killPort(${p.pid}, event)">연결 해제</button>
+    <div class="kill-result" id="kill-result-${p.pid}"></div>
+  ` : '';
   return `
     <div class="row"><span class="label">PID</span><span class="val">${p.pid ?? '?'}</span></div>
     <div class="row"><span class="label">명령어</span><span class="val">${cmd}</span></div>
     <div class="row"><span class="label">원격</span><span class="val">${p.remote || '—'}</span></div>
     <div class="row"><span class="label">상태</span><span class="val">${p.state}</span></div>
+    ${killBtn}
   `;
+}
+
+async function killPort(pid, event) {
+  if (event) event.stopPropagation();
+  if (!confirm('PID ' + pid + ' 프로세스를 종료하시겠습니까?')) return;
+  const resultEl = document.getElementById('kill-result-' + pid);
+  if (resultEl) resultEl.textContent = '종료 중...';
+  try {
+    const r = await fetch('/api/kill', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({pid: pid})
+    });
+    const data = await r.json();
+    if (data.ok) {
+      if (resultEl) { resultEl.textContent = '✓ 종료됨'; resultEl.className = 'kill-result ok'; }
+      setTimeout(() => poll(), 500);  // 즉시 갱신
+    } else {
+      const hint = data.hint ? ' (' + data.hint + ')' : '';
+      if (resultEl) {
+        resultEl.textContent = '✗ ' + (data.error || '실패') + hint;
+        resultEl.className = 'kill-result err';
+      }
+    }
+  } catch (e) {
+    if (resultEl) { resultEl.textContent = '✗ 연결 실패'; resultEl.className = 'kill-result err'; }
+  }
 }
 
 function escapeHtml(s) {

@@ -12,6 +12,11 @@ import sys
 from datetime import datetime, timezone
 from typing import Any
 
+try:
+    import psutil
+except ImportError:
+    psutil = None  # type: ignore[assignment]
+
 
 def is_available() -> bool:
     return sys.platform == "darwin" and shutil.which("netstat") is not None
@@ -53,16 +58,19 @@ def scan(self_pid: int | None = None) -> dict[str, Any]:
         if self_pid is not None and pid == self_pid:
             continue
 
+        # psutil로 프로세스 정보 보강 (cmdline + 친근한 이름)
+        proc_name, cmdline, permission = _enrich_process(pid, proc_pid[0] if proc_pid else None)
+
         ports.append({
             "port": port,
             "protocol": "tcp" if proto.startswith("tcp") else "udp",
             "family": "ipv6" if proto.endswith("6") else "ipv4",
             "state": "LISTEN",
             "pid": pid,
-            "process": proc_pid[0] if proc_pid else "unknown",
-            "cmdline": None,
+            "process": proc_name,
+            "cmdline": cmdline,
             "remote": None,
-            "permission": "full",
+            "permission": permission,
         })
 
     # 포트+family 기준 중복 제거 (IPv4/IPv6 동시 리스닝)
@@ -107,3 +115,77 @@ def _parse_port(local: str) -> int | None:
 
 def _now() -> str:
     return datetime.now(timezone.utc).isoformat()
+
+
+def _enrich_process(pid: int | None, fallback_name: str | None) -> tuple[str, str | None, str]:
+    """psutil로 cmdline을 가져오고 친근한 프로세스명을 추출.
+
+    node_modules/@org/pkg, python -m mod, uvicorn app:main 등에서
+    핵심 패키지/모듈명을 추출해 사용자 친화적 이름을 만든다.
+    """
+    if pid is None or psutil is None:
+        name = fallback_name or "unknown"
+        return _friendly_name(name, None), None, "limited"
+    try:
+        p = psutil.Process(pid)
+        raw_name = p.name()
+        try:
+            cmd_parts = p.cmdline()
+        except psutil.AccessDenied:
+            cmd_parts = []
+    except psutil.NoSuchProcess:
+        return fallback_name or "unknown", None, "limited"
+    except psutil.AccessDenied:
+        return fallback_name or "unknown", None, "denied"
+
+    cmdline = " ".join(cmd_parts) if cmd_parts else None
+    friendly = _friendly_name(raw_name, cmd_parts, fallback_name)
+    perm = "full" if cmd_parts else "limited"
+    return friendly, cmdline, perm
+
+
+def _friendly_name(raw_name: str, cmd_parts: list[str] | None,
+                   fallback: str | None = None) -> str:
+    """실행 파일명보다 의미 있는 이름 추출.
+
+    예: bun.exe .../node_modules/@bitkyc08/opencodex/... -> opencodex
+        python app.py -> app
+        node server.js -> server
+    """
+    if not cmd_parts:
+        # 실행 파일명에서 .exe, 경로 제거
+        name = (fallback or raw_name).split("/")[-1]
+        return name.replace(".exe", "")
+
+    full = " ".join(cmd_parts)
+
+    # node_modules/@org/pkg 패턴
+    import re
+    m = re.search(r"node_modules/(@[\w.-]+/[\w.-]+)", full)
+    if m:
+        parts = m.group(1).split("/")
+        # @org/pkg -> pkg (org가 의미 없으면)
+        return parts[-1] if len(parts) > 1 else m.group(1)
+
+    # node_modules/pkg 패턴
+    m = re.search(r"node_modules/([\w.-]+)", full)
+    if m:
+        return m.group(1)
+
+    # python -m module 패턴
+    m = re.search(r"\-m\s+([\w.]+)", full)
+    if m:
+        return m.group(1).split(".")[-1]
+
+    # uvicorn/gunicorn app:main 패턴
+    m = re.search(r"(?:uvicorn|gunicorn)\s+([\w.:]+)", full)
+    if m:
+        return m.group(1).split(":")[0]
+
+    # 일반: 마지막 .py/.ts/.js 파일명 (확장자 제거)
+    for part in cmd_parts:
+        if part.endswith((".py", ".ts", ".js")):
+            return part.split("/")[-1].rsplit(".", 1)[0]
+
+    # 실행 파일명에서 .exe, 경로 제거
+    return raw_name.split("/")[-1].replace(".exe", "")
