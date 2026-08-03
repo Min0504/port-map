@@ -16,6 +16,7 @@
 - **클릭 확장** — 한 번 클릭하면 PID, 명령어, 원격 연결 + **연결 해제** 버튼
 - **포트 연결 해제** — 클릭 한 번으로 프로세스 종료 (SIGTERM)
 - **위치 기억** — 재실행 시 마지막 위치/크기 복원
+- **최근 사용 포트 표시** — 꺼진 포트도 "최근 사용된 포트" 섹션에서 확인 (last-seen 시간 표시)
 - **크로스플랫폼** — macOS, Windows, Linux
 
 ## 빠른 시작
@@ -42,6 +43,9 @@ uv pip install --python .venv/bin/python -r requirements.txt
 ### 2. 실행
 
 ```bash
+# 전역 명령어 (install.sh 후 어디서든)
+portmap
+
 # 개발 모드
 .venv/bin/python app.py
 
@@ -52,15 +56,23 @@ uv pip install --python .venv/bin/python -r requirements.txt
 open dist/port-map.app
 ```
 
-## 터미널 단축키 (선택)
+## 전역 명령어
 
-`~/.zshrc` 또는 `~/.bashrc`에 추가:
+`./install.sh` 실행 시 `~/.local/bin/portmap` 심볼릭 링크가 생성됩니다.
+PATH에 `~/.local/bin`이 있으면 어디서든 `portmap` 입력으로 바로 실행:
 
 ```bash
-alias pm="cd /path/to/port-map && .venv/bin/python app.py"
+portmap              # 위젯 실행
+portmap --interval 5 # 폴링 5초
+portmap --no-on-top  # 항상 위 해제
 ```
 
-이제 어디서든 `pm` 입력으로 바로 실행.
+`~/.local/bin`이 PATH에 없다면:
+
+```bash
+echo 'export PATH="$HOME/.local/bin:$PATH"' >> ~/.zshrc
+source ~/.zshrc
+```
 
 ## 옵션
 

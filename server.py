@@ -24,6 +24,11 @@ else:
 _last_snapshot: dict[str, Any] | None = None
 _fail_count = 0
 
+# 포트 히스토리 — 이전에 보였다가 사라진 포트 추적
+# key: "port:family" -> {port, process, last_seen, protocol, family}
+_port_history: dict[str, dict[str, Any]] = {}
+_history_lock = threading.Lock()
+
 
 def _ignore_sigpipe() -> None:
     if (sigpipe := getattr(signal, "SIGPIPE", None)) is not None:
@@ -71,6 +76,11 @@ class Handler(BaseHTTPRequestHandler):
             }
             snapshot = dict(snapshot)
             snapshot["error"] = f"scan_failed: {exc}"
+
+        # 포트 히스토리 업데이트 — 현재 활성 포트 기록, 사라진 포트 히스토리에 보존
+        if not snapshot.get("error"):
+            _update_history(snapshot)
+        snapshot["closed_ports"] = _get_closed_ports()
         self._json(snapshot)
 
     def _serve_health(self) -> None:
@@ -143,6 +153,51 @@ class Handler(BaseHTTPRequestHandler):
                         "hint": "sudo 또는 관리자 권한 필요"})
         except OSError as exc:
             self._json({"ok": False, "error": f"os_error: {exc}"})
+
+
+def _update_history(snapshot: dict[str, Any]) -> None:
+    """현재 활성 포트를 히스토리에 기록하고, 사라진 포트를 closed로 보존."""
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc).isoformat()
+    active_keys = set()
+    for p in snapshot.get("ports", []):
+        key = f"{p['port']}:{p['family']}"
+        active_keys.add(key)
+        with _history_lock:
+            _port_history[key] = {
+                "port": p["port"],
+                "family": p["family"],
+                "protocol": p.get("protocol", "tcp"),
+                "process": p.get("process", "unknown"),
+                "pid": p.get("pid"),
+                "last_seen": now,
+                "active": True,
+            }
+    # 활성 포트가 아닌 기존 히스토리 항목은 closed 상태로 전환
+    with _history_lock:
+        for key, info in list(_port_history.items()):
+            if key in active_keys:
+                info["active"] = True
+            else:
+                info["active"] = False
+                # last_seen은 마지막으로 활성이었던 시간 유지
+
+
+def _get_closed_ports() -> list[dict[str, Any]]:
+    """현재 비활성(closed)인 포트 히스토리 반환."""
+    with _history_lock:
+        return [
+            {
+                "port": info["port"],
+                "family": info["family"],
+                "protocol": info["protocol"],
+                "process": info["process"],
+                "pid": info.get("pid"),
+                "last_seen": info["last_seen"],
+            }
+            for info in _port_history.values()
+            if not info.get("active")
+        ]
 
 
 class PortMapServer:

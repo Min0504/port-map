@@ -34,8 +34,17 @@ echo ""
 echo "══════════════════════════════════════"
 echo "  ✓ 설치 완료!"
 echo "══════════════════════════════════════"
+
+# 전역 명령어 등록
+echo "▶ 전역 명령어 등록 중..."
+LOCAL_BIN="$HOME/.local/bin"
+mkdir -p "$LOCAL_BIN"
+ln -sf "$PWD/bin/portmap" "$LOCAL_BIN/portmap"
+echo "  ✓ portmap → $LOCAL_BIN/portmap"
+
 echo ""
 echo "실행 방법:"
+echo "  전역:  portmap              # 어디서든 실행 가능"
 echo "  개발:  .venv/bin/python app.py"
 echo "  빌드:  ./dist/port-map"
 if [ -d "dist/port-map.app" ]; then
@@ -46,3 +55,8 @@ echo "옵션:"
 echo "  --interval 5     폴링 주기 (초)"
 echo "  --opacity 0.8    창 투명도"
 echo "  --click-through  위젯 클릭통과 모드"
+echo ""
+if ! echo "$PATH" | grep -q "$LOCAL_BIN"; then
+    echo "※ PATH에 $LOCAL_BIN 이 없습니다. 추가하려면:"
+    echo "    echo 'export PATH=\"$HOME/.local/bin:$PATH\"' >> ~/.zshrc && source ~/.zshrc"
+fi

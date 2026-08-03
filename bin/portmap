@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Port Map — 전역 실행 래퍼
+# 설치: ./install.sh  (또는 수동: ln -sf "$PWD/bin/portmap" ~/.local/bin/portmap)
+# 이후 터미널에서 `portmap` 입력 즉시 위젯 실행.
+
+set -e
+
+# 프로젝트 루트 (이 스크립트의 심볼릭 링크/복사본 위치 기준)
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$SCRIPT_DIR"
+
+# 심볼릭 링크로 설치된 경우 원본 위치 추적
+if [ -L "$0" ]; then
+    REAL="$(readlink -f "$0" 2>/dev/null || python3 -c "import os,sys;print(os.path.realpath(sys.argv[1]))" "$0")"
+    if [ -n "$REAL" ] && [ -f "$REAL" ]; then
+        PROJECT_DIR="$(cd "$(dirname "$REAL")/.." && pwd)"
+    fi
+fi
+
+# venv 우선, 없으면 시스템 python3
+if [ -x "$PROJECT_DIR/.venv/bin/python" ]; then
+    PYTHON="$PROJECT_DIR/.venv/bin/python"
+else
+    PYTHON="$(command -v python3)"
+    if [ -z "$PYTHON" ]; then
+        echo "✗ Python 3가 필요합니다. https://python.org"
+        exit 1
+    fi
+    # 의존성 확인
+    "$PYTHON" -c "import webview" 2>/dev/null || {
+        echo "✗ pywebview가 설치되어 있지 않습니다."
+        echo "  cd $PROJECT_DIR && ./install.sh  실행 후 다시 시도하세요."
+        exit 1
+    }
+fi
+
+cd "$PROJECT_DIR"
+exec "$PYTHON" app.py "$@"
