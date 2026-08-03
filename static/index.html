@@ -263,7 +263,7 @@
       사용 중 <span class="tab-count" id="active-count">0</span>
     </button>
     <button class="tab" id="tab-closed" data-tab="closed">
-      최근 사용 <span class="tab-count" id="closed-count">0</span>
+      사용 가능 <span class="tab-count" id="closed-count">0</span>
     </button>
   </div>
   <input id="search" type="text" placeholder="포트 또는 프로세스명..." spellcheck="false">
@@ -273,7 +273,7 @@
   </div>
   <div id="tab-panel-closed" class="tab-panel">
     <div id="closed-grid"></div>
-    <div id="closed-status" style="text-align:center;color:var(--dim);padding:40px 10px;font-size:12px;">최근 사용된 포트 없음</div>
+    <div id="closed-status" style="text-align:center;color:var(--dim);padding:40px 10px;font-size:12px;">사용 가능한 포트 없음</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -539,7 +539,7 @@ function renderClosed(closedPorts) {
   closedCountEl.textContent = closedPorts.length;
   if (closedPorts.length === 0) {
     closedStatus.style.display = '';
-    closedStatus.textContent = '최근 사용된 포트 없음';
+    closedStatus.textContent = '사용 가능한 포트 없음';
     closedGrid.innerHTML = '';
     return;
   }
@@ -565,7 +565,7 @@ function renderClosed(closedPorts) {
           <span class="card-proc">${escapeHtml(p.process)}</span>
           <span class="badge ${p.protocol}">${p.protocol}</span>
         </div>
-        <div class="last-seen">${ago} 해제됨</div>
+        <div class="last-seen">${ago} 전 사용 중단 · 다시 사용 가능</div>
       </div>
     `;
   }).join('');
