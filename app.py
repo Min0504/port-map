@@ -107,8 +107,9 @@ def main() -> None:
     win_w = cfg["width"] if cfg["width"] and cfg["width"] > 100 else 320
     win_h = cfg["height"] if cfg["height"] and cfg["height"] > 100 else 480
     # x/y가 화면 밖이면 기본값 사용 (NoneType screen 에러 방지)
-    win_x = cfg["x"] if cfg["x"] is not None and 0 <= cfg["x"] <= 4000 else 100
-    win_y = cfg["y"] if cfg["y"] is not None and 0 <= cfg["y"] <= 2000 else 100
+    # 보수적 상한 — 대부분의 화면에서 안전한 범위
+    win_x = cfg["x"] if cfg["x"] is not None and 0 <= cfg["x"] <= 3000 else 100
+    win_y = cfg["y"] if cfg["y"] is not None and 0 <= cfg["y"] <= 1200 else 100
 
     window = webview.create_window(
         title="Port Map",
@@ -183,14 +184,21 @@ def main() -> None:
             return False
 
     # expose를 start() 전에 호출 — macOS에서 가장 안정적
-    window.expose(close_window, minimize_window, toggle_on_top, save_setting)
+    def move_window(x, y):
+        """창 위치 이동 (JS 드래그에서 호출)."""
+        try:
+            window.move(int(x), int(y))
+        except Exception:
+            pass
+
+    window.expose(close_window, minimize_window, toggle_on_top, save_setting, move_window)
 
     def on_loaded():
         # 창 위치 강제 이동 (pywebview x/y가 macOS에서 무시되는 문제 보정)
         # 창 위치 강제 이동 — 화면 안쪽인 경우만
         cx = cfg.get("x")
         cy = cfg.get("y")
-        if cx is not None and cy is not None and 0 <= cx <= 4000 and 0 <= cy <= 2000:
+        if cx is not None and cy is not None and 0 <= cx <= 3000 and 0 <= cy <= 1200:
             try:
                 window.move(cx, cy)
             except Exception:

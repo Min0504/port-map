@@ -43,8 +43,6 @@
   #drag-handle {
     height: 32px; flex-shrink: 0;
     background: var(--bg);
-    -webkit-app-region: drag;
-    app-region: drag;
     cursor: grab;
     display: flex;
     align-items: center;
@@ -52,6 +50,7 @@
     border-radius: 12px 12px 0 0;
     gap: 8px;
   }
+  #drag-handle.dragging { cursor: grabbing; }
   #drag-handle:active { cursor: grabbing; }
   #drag-handle .title { font-weight: 700; font-size: 12px; letter-spacing: 0.3px; }
   #drag-handle .count {
@@ -68,8 +67,6 @@
   #window-controls {
     margin-left: auto;
     display: flex; gap: 6px; flex-shrink: 0;
-    -webkit-app-region: no-drag;
-    app-region: no-drag;
   }
   .win-btn {
     width: 16px; height: 16px; border-radius: 50%;
@@ -372,6 +369,40 @@ function switchTab(tab) {
   panelClosed.classList.toggle('active', tab === 'closed');
   applyFilter();
 }
+
+// ── 드래그로 창 이동 (pywebview WKWebView는 -webkit-app-region 미지원) ──
+const dragHandle = document.getElementById('drag-handle');
+let dragState = null;
+
+dragHandle.addEventListener('mousedown', (e) => {
+  // 버튼 클릭은 드래그 제외
+  if (e.target.closest('#window-controls')) return;
+  dragState = {
+    mouseX: e.screenX,
+    mouseY: e.screenY,
+    winX: e.screenX - e.clientX,
+    winY: e.screenY - e.clientY,
+  };
+  dragHandle.classList.add('dragging');
+  e.preventDefault();
+});
+
+document.addEventListener('mousemove', (e) => {
+  if (!dragState) return;
+  const newX = dragState.winX + (e.screenX - dragState.mouseX);
+  const newY = dragState.winY + (e.screenY - dragState.mouseY);
+  // 화면 밖 방지
+  const safeX = Math.max(0, Math.min(newX, 4000));
+  const safeY = Math.max(0, Math.min(newY, 2000));
+  callPyApi('move_window', safeX, safeY);
+});
+
+document.addEventListener('mouseup', () => {
+  if (dragState) {
+    dragState = null;
+    dragHandle.classList.remove('dragging');
+  }
+});
 
 searchEl.addEventListener('input', () => {
   searchQuery = searchEl.value.trim().toLowerCase();
