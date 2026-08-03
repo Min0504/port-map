@@ -120,18 +120,39 @@ def main() -> None:
     # ── 창 제어 API (JS에서 호출) ──
     # expose는 창 생성 직후, webview.start() 전에 호출해야 안정적
     def close_window():
-        """위젯 종료."""
+        """위젯 종료 — 창 닫기 + 서버 종료 + 프로세스 종료."""
+        try:
+            # 위치/크기 저장 (on_closed가 호출되지 않을 수 있으므로 직접 저장)
+            new_cfg = dict(cfg)
+            geom = window.evaluate_js(
+                "[window.screenX, window.screenY, window.outerWidth, window.outerHeight]")
+            if geom and len(geom) == 4:
+                new_cfg["x"], new_cfg["y"] = int(geom[0]), int(geom[1])
+                new_cfg["width"], new_cfg["height"] = int(geom[2]), int(geom[3])
+            save_config(new_cfg)
+        except Exception:
+            pass
+        try:
+            server.shutdown()
+        except Exception:
+            pass
         try:
             window.destroy()
         except Exception:
             pass
+        # destroy()만으로는 프로세스가 종료되지 않으므로 명시적으로 exit
+        import os
+        os._exit(0)
 
     def minimize_window():
         """창 최소화/숨기기."""
         try:
             window.hide()
         except Exception:
-            pass
+            try:
+                window.minimize()
+            except Exception:
+                pass
 
     def toggle_on_top():
         """항상 위 토글."""
