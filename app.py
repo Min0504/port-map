@@ -117,34 +117,8 @@ def main() -> None:
         transparent=False,
     )
 
-    def on_loaded():
-        # 창 위치 강제 이동 (pywebview x/y가 macOS에서 무시되는 문제 보정)
-        if cfg.get("x") is not None and cfg.get("y") is not None:
-            try:
-                window.move(cfg["x"], cfg["y"])
-            except Exception:
-                pass
-        # 항상 위 강제 적용
-        if cfg.get("on_top"):
-            try:
-                window.on_top = True
-            except Exception:
-                pass
-        # 위젯 모드: click-through 적용 (마우스 이벤트가 창을 통과)
-        if cfg.get("click_through"):
-            try:
-                window.evaluate_js(
-                    "document.body.style.pointerEvents='none';"
-                    "document.getElementById('drag-handle').style.pointerEvents='auto';"
-                    "document.getElementById('search').style.pointerEvents='auto';"
-                    "document.getElementById('grid').style.pointerEvents='auto';"
-                )
-            except Exception:
-                pass
-        # 창 제어 API 노출 (JS에서 호출 가능)
-        window.expose(close_window, minimize_window, toggle_on_top, save_setting)
-
     # ── 창 제어 API (JS에서 호출) ──
+    # expose는 창 생성 직후, webview.start() 전에 호출해야 안정적
     def close_window():
         """위젯 종료."""
         try:
@@ -176,6 +150,34 @@ def main() -> None:
             return True
         except Exception:
             return False
+
+    # expose를 start() 전에 호출 — macOS에서 가장 안정적
+    window.expose(close_window, minimize_window, toggle_on_top, save_setting)
+
+    def on_loaded():
+        # 창 위치 강제 이동 (pywebview x/y가 macOS에서 무시되는 문제 보정)
+        if cfg.get("x") is not None and cfg.get("y") is not None:
+            try:
+                window.move(cfg["x"], cfg["y"])
+            except Exception:
+                pass
+        # 항상 위 강제 적용
+        if cfg.get("on_top"):
+            try:
+                window.on_top = True
+            except Exception:
+                pass
+        # 위젯 모드: click-through 적용 (마우스 이벤트가 창을 통과)
+        if cfg.get("click_through"):
+            try:
+                window.evaluate_js(
+                    "document.body.style.pointerEvents='none';"
+                    "document.getElementById('drag-handle').style.pointerEvents='auto';"
+                    "document.getElementById('search').style.pointerEvents='auto';"
+                    "document.getElementById('grid').style.pointerEvents='auto';"
+                )
+            except Exception:
+                pass
 
     def on_closed():
         # 위치/크기 저장

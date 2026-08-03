@@ -289,19 +289,35 @@ const closedCountEl = document.getElementById('closed-count');
 const toastEl = document.getElementById('toast');
 
 // 창 제어 버튼
+// pywebview expose 함수는 window.pywebview.api 에 등록됨
+function callPyApi(name, ...args) {
+  const api = window.pywebview?.api;
+  if (api && typeof api[name] === 'function') {
+    return api[name](...args);
+  }
+  return null;
+}
+
 document.getElementById('btn-close').addEventListener('click', () => {
-  if (window.close_window) close_window();
+  const r = callPyApi('close_window');
+  if (r === null) {
+    // 폴백 — 일반 window.close
+    window.close();
+  }
 });
 document.getElementById('btn-minimize').addEventListener('click', () => {
-  if (window.minimize_window) minimize_window();
-  else { document.getElementById('container').style.display = 'none'; }
+  const r = callPyApi('minimize_window');
+  if (r === null) {
+    // 폴백 — 컨테이너 숨기기
+    document.getElementById('container').style.display = 'none';
+  }
 });
 document.getElementById('btn-theme').addEventListener('click', () => {
   currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
   document.documentElement.setAttribute('data-theme', currentTheme);
   document.documentElement.style.setProperty('--bg',
     currentTheme === 'light' ? `rgba(245,246,248,${OPACITY})` : `rgba(20,22,28,${OPACITY})`);
-  if (window.save_setting) save_setting('theme', currentTheme);
+  callPyApi('save_setting', 'theme', currentTheme);
   showToast(currentTheme === 'dark' ? '다크 테마' : '라이트 테마');
 });
 
@@ -550,7 +566,7 @@ function updateCard(el, p) {
   const detail = expandedSet.has(key) ? buildDetail(p) : '';
   el.innerHTML = `
     <div class="card-head">
-      <span class="card-port" onclick="copyPort(${p.port}, event)" title="클릭하여 복사">${p.port}</span>
+      <span class="card-port" onclick="copyPort(${p.port}, event)" title="클릭하여 주소 복사 (localhost:포트)">${p.port}</span>
       <span class="card-proc">${escapeHtml(p.process)}</span>
       ${pinBtn}
       ${protoBadge}${famBadge}${permBadge}
@@ -584,14 +600,15 @@ function togglePin(port, event) {
     favorites.add(port);
     showToast('고정: ' + port);
   }
-  if (window.save_setting) save_setting('favorites', [...favorites]);
+  callPyApi('save_setting', 'favorites', [...favorites]);
   // 재렌더
   poll();
 }
 
 function copyPort(port, event) {
   if (event) event.stopPropagation();
-  copyToClipboard(String(port));
+  // 포트 접속 주소 복사 — http://localhost:PORT
+  copyToClipboard('http://localhost:' + port);
 }
 
 async function killPort(pid, event) {
