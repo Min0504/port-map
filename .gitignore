@@ -4,5 +4,7 @@ __pycache__/
 *.pyc
 dist/
 build/
-.spec/
+*.spec
 .DS_Store
+.venv/
+*.spec
