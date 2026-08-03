@@ -260,10 +260,10 @@
   <div class="warn-bar" id="warn-bar">스캐너 확인 필요 — 연속 실패</div>
   <div class="tab-bar">
     <button class="tab active" id="tab-active" data-tab="active">
-      사용 중 <span class="tab-count" id="active-count">0</span>
+      활성 <span class="tab-count" id="active-count">0</span>
     </button>
     <button class="tab" id="tab-closed" data-tab="closed">
-      사용 가능 <span class="tab-count" id="closed-count">0</span>
+      비활성 <span class="tab-count" id="closed-count">0</span>
     </button>
   </div>
   <input id="search" type="text" placeholder="포트 또는 프로세스명..." spellcheck="false">
@@ -273,7 +273,7 @@
   </div>
   <div id="tab-panel-closed" class="tab-panel">
     <div id="closed-grid"></div>
-    <div id="closed-status" style="text-align:center;color:var(--dim);padding:40px 10px;font-size:12px;">사용 가능한 포트 없음</div>
+    <div id="closed-status" style="text-align:center;color:var(--dim);padding:40px 10px;font-size:12px;">비활성 포트 없음</div>
   </div>
 </div>
 <div id="toast"></div>
@@ -539,7 +539,7 @@ function renderClosed(closedPorts) {
   closedCountEl.textContent = closedPorts.length;
   if (closedPorts.length === 0) {
     closedStatus.style.display = '';
-    closedStatus.textContent = '사용 가능한 포트 없음';
+    closedStatus.textContent = '비활성 포트 없음';
     closedGrid.innerHTML = '';
     return;
   }
@@ -564,8 +564,9 @@ function renderClosed(closedPorts) {
           <span class="card-port">${p.port}</span>
           <span class="card-proc">${escapeHtml(p.process)}</span>
           <span class="badge ${p.protocol}">${p.protocol}</span>
+          <span class="badge" style="background:rgba(224,80,80,0.18);color:var(--err);">○ 중단</span>
         </div>
-        <div class="last-seen">${ago} 전 사용 중단 · 다시 사용 가능</div>
+        <div class="last-seen">이전: ${escapeHtml(p.process)} · ${ago} 전 중단</div>
       </div>
     `;
   }).join('');
@@ -621,6 +622,7 @@ function updateCard(el, p) {
   el.innerHTML = `
     <div class="card-head">
       <span class="card-port" onclick="copyPort(${p.port}, event)" title="클릭하여 주소 복사 (localhost:포트)">${p.port}</span>
+      <span class="badge active-badge" style="background:rgba(80,200,120,0.18);color:var(--ok);">●</span>
       <span class="card-proc">${escapeHtml(p.process)}</span>
       ${pinBtn}
       ${protoBadge}${famBadge}${permBadge}
