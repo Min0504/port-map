@@ -41,7 +41,7 @@
   }
   /* 드래그 핸들 — 이 영역만 창 이동 가능 */
   #drag-handle {
-    height: 32px;
+    height: 32px; flex-shrink: 0;
     background: var(--bg);
     -webkit-app-region: drag;
     app-region: drag;
@@ -67,18 +67,19 @@
   /* 창 제어 버튼 (끄기, 최소화, 설정) */
   #window-controls {
     margin-left: auto;
-    display: flex; gap: 6px;
+    display: flex; gap: 6px; flex-shrink: 0;
     -webkit-app-region: no-drag;
     app-region: no-drag;
   }
   .win-btn {
-    width: 14px; height: 14px; border-radius: 50%;
-    border: none; cursor: pointer;
+    width: 16px; height: 16px; border-radius: 50%;
+    border: none; cursor: pointer; flex-shrink: 0;
     display: flex; align-items: center; justify-content: center;
-    font-size: 9px; color: rgba(0,0,0,0.5);
-    transition: filter 0.15s;
+    font-size: 10px; color: rgba(0,0,0,0.55); font-weight: 700;
+    transition: filter 0.15s, transform 0.1s;
   }
-  .win-btn:hover { filter: brightness(1.15); }
+  .win-btn:hover { filter: brightness(1.2); transform: scale(1.1); }
+  .win-btn:active { transform: scale(0.95); }
   .win-btn.minimize { background: #f0a040; }
   .win-btn.theme { background: #5b9dff; }
   .win-btn.close { background: #e05050; }
@@ -89,9 +90,11 @@
     height: calc(100vh - 32px);
     display: flex;
     flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
   #search {
-    width: 100%;
+    width: 100%; flex-shrink: 0;
     padding: 7px 12px;
     border: 1px solid rgba(255,255,255,0.1);
     border-radius: 8px;
@@ -105,6 +108,7 @@
   #search::placeholder { color: var(--dim); }
   #grid {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
     display: flex;
     flex-direction: column;
@@ -193,7 +197,7 @@
   }
   /* 탭 바 */
   .tab-bar {
-    display: flex; gap: 0; margin-bottom: 8px;
+    display: flex; gap: 0; margin-bottom: 8px; flex-shrink: 0;
     border-radius: 8px; overflow: hidden;
     background: rgba(255,255,255,0.04);
   }
@@ -220,8 +224,16 @@
   .tab.active .tab-count {
     background: rgba(91,157,255,0.2); color: var(--accent);
   }
-  .tab-panel { display: none; }
-  .tab-panel.active { display: flex; flex-direction: column; gap: 4px; }
+  .tab-panel { display: none; flex: 1; min-height: 0; overflow: hidden; }
+  .tab-panel.active { display: flex; flex-direction: column; gap: 4px; flex: 1; min-height: 0; overflow: hidden; }
+  #closed-grid {
+    flex: 1; overflow-y: auto;
+    display: flex; flex-direction: column; gap: 4px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,255,255,0.15) transparent;
+  }
+  #closed-grid::-webkit-scrollbar { width: 4px; }
+  #closed-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
   /* 꺼진 포트 카드 */
   .closed-card {
     background: var(--card); border-radius: 7px;
