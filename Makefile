@@ -5,9 +5,21 @@ PYTHON := .venv/bin/python
 build:
 	./build.sh
 
+## 전역 명령어 설치
+install:
+	./install.sh
+
 ## 실행 (개발 모드)
 run:
 	$(PYTHON) app.py
+
+## 위젯 실행 (전역 명령어)
+widget:
+	./bin/portmap
+
+## 포트 목록 출력 (CLI)
+ports:
+	./bin/portmap ports
 
 ## 바이너리 실행
 bin:
@@ -26,4 +38,4 @@ setup:
 clean:
 	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
-.PHONY: build run bin test setup clean
+.PHONY: build install run widget ports bin test setup clean

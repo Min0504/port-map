@@ -16,6 +16,17 @@
     --err: #e05050;
     --ok: #50c878;
   }
+  :root[data-theme="light"] {
+    --bg: rgba(245, 246, 248, 0.92);
+    --card: rgba(255, 255, 255, 0.95);
+    --card-hover: rgba(235, 238, 245, 1);
+    --text: #1a1d24;
+    --dim: #6b7280;
+    --accent: #2563eb;
+    --warn: #d97706;
+    --err: #dc2626;
+    --ok: #16a34a;
+  }
   * { margin: 0; padding: 0; box-sizing: border-box; }
   html, body { height: 100%; }
   body {
@@ -30,33 +41,52 @@
   }
   /* 드래그 핸들 — 이 영역만 창 이동 가능 */
   #drag-handle {
-    height: 30px;
+    height: 32px;
     background: var(--bg);
     -webkit-app-region: drag;
     app-region: drag;
     cursor: grab;
     display: flex;
     align-items: center;
-    padding: 0 12px;
+    padding: 0 10px;
     border-radius: 12px 12px 0 0;
     gap: 8px;
   }
   #drag-handle:active { cursor: grabbing; }
   #drag-handle .title { font-weight: 700; font-size: 12px; letter-spacing: 0.3px; }
   #drag-handle .count {
-    margin-left: auto; color: var(--dim); font-size: 11px;
+    color: var(--dim); font-size: 11px;
     background: rgba(255,255,255,0.06); padding: 1px 7px; border-radius: 8px;
   }
+  :root[data-theme="light"] #drag-handle .count { background: rgba(0,0,0,0.06); }
   #drag-handle .dot {
     width: 8px; height: 8px; border-radius: 50%; background: var(--ok);
   }
   #drag-handle .dot.err { background: var(--err); }
   #drag-handle .dot.warn { background: var(--warn); }
+  /* 창 제어 버튼 (끄기, 최소화, 설정) */
+  #window-controls {
+    margin-left: auto;
+    display: flex; gap: 6px;
+    -webkit-app-region: no-drag;
+    app-region: no-drag;
+  }
+  .win-btn {
+    width: 14px; height: 14px; border-radius: 50%;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; color: rgba(0,0,0,0.5);
+    transition: filter 0.15s;
+  }
+  .win-btn:hover { filter: brightness(1.15); }
+  .win-btn.minimize { background: #f0a040; }
+  .win-btn.theme { background: #5b9dff; }
+  .win-btn.close { background: #e05050; }
   #container {
     background: var(--bg);
     border-radius: 0 0 12px 12px;
     padding: 8px;
-    height: calc(100vh - 30px);
+    height: calc(100vh - 32px);
     display: flex;
     flex-direction: column;
   }
@@ -85,23 +115,31 @@
   #grid::-webkit-scrollbar { width: 4px; }
   #grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
   .card {
-    cursor: pointer;  /* 싱글클릭으로 확장/접기 */
+    cursor: pointer;
     background: var(--card);
     border-radius: 8px;
     padding: 8px 10px;
-    cursor: pointer;
     transition: background 0.15s, opacity 0.3s, border-color 0.15s;
     border: 1px solid transparent;
+    position: relative;
   }
   .card:hover { background: var(--card-hover); border-color: rgba(91,157,255,0.25); }
   .card.new { animation: fadeIn 0.3s ease; }
   .card.gone { opacity: 0; pointer-events: none; transform: scale(0.95); }
+  .card.pinned { border-left: 3px solid var(--accent); }
+  .card.alert-new { animation: alertPulse 1.5s ease; }
   @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; } }
+  @keyframes alertPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(80,200,120,0); }
+    50% { box-shadow: 0 0 8px 2px rgba(80,200,120,0.3); }
+  }
   .card-head { display: flex; align-items: center; gap: 6px; }
   .card-port {
     font-weight: 700; font-size: 14px; color: var(--accent);
     min-width: 48px; font-variant-numeric: tabular-nums;
+    cursor: pointer; /* 클릭하면 복사 */
   }
+  .card-port:hover { text-decoration: underline; }
   .card-proc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 12px; }
   .badge { font-size: 9px; padding: 1px 5px; border-radius: 4px; font-weight: 600; text-transform: uppercase; }
   .badge.tcp { background: rgba(91,157,255,0.18); color: var(--accent); }
@@ -109,12 +147,21 @@
   .badge.ipv6 { background: rgba(180,140,220,0.18); color: #b48cdc; }
   .badge.denied { background: rgba(224,80,80,0.18); color: var(--err); }
   .badge.limited { background: rgba(240,160,64,0.18); color: var(--warn); }
+  .pin-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--dim); font-size: 12px; padding: 0 2px;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .card:hover .pin-btn { opacity: 0.6; }
+  .pin-btn:hover { opacity: 1; color: var(--accent); }
+  .card.pinned .pin-btn { opacity: 1; color: var(--accent); }
   .card-detail {
     margin-top: 6px; padding-top: 6px;
     border-top: 1px solid rgba(255,255,255,0.08);
     font-size: 11px; color: var(--dim);
     display: none; line-height: 1.5;
   }
+  :root[data-theme="light"] .card-detail { border-top-color: rgba(0,0,0,0.08); }
   .card.expanded .card-detail { display: block; }
   .card-detail .row { word-break: break-all; }
   .card-detail .label { color: var(--dim); display: inline-block; min-width: 52px; }
@@ -152,6 +199,7 @@
     font-size: 11px; color: var(--dim); cursor: pointer;
     user-select: none; -webkit-user-select: none;
   }
+  :root[data-theme="light"] .closed-toggle { background: rgba(0,0,0,0.04); }
   .closed-toggle:hover { background: rgba(255,255,255,0.08); }
   .closed-toggle .arrow { transition: transform 0.2s; }
   .closed-toggle.open .arrow { transform: rotate(90deg); }
@@ -166,10 +214,21 @@
     padding: 6px 10px; border: 1px solid rgba(255,255,255,0.04);
     opacity: 0.6;
   }
+  :root[data-theme="light"] .closed-card { background: rgba(240,240,245,0.6); border-color: rgba(0,0,0,0.04); }
   .closed-card .card-head { display: flex; align-items: center; gap: 6px; }
   .closed-card .card-port { font-weight: 700; font-size: 13px; color: var(--dim); min-width: 48px; font-variant-numeric: tabular-nums; }
   .closed-card .card-proc { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-size: 11px; color: var(--dim); }
   .closed-card .last-seen { font-size: 9px; color: var(--dim); margin-top: 2px; }
+  /* 토스트 알림 */
+  #toast {
+    position: fixed; bottom: 8px; left: 50%; transform: translateX(-50%);
+    background: var(--card); color: var(--text);
+    padding: 6px 14px; border-radius: 8px; font-size: 11px;
+    border: 1px solid rgba(91,157,255,0.3);
+    opacity: 0; transition: opacity 0.3s; pointer-events: none;
+    z-index: 100;
+  }
+  #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -177,6 +236,11 @@
   <span class="dot" id="status-dot"></span>
   <span class="title">Port Map</span>
   <span class="count" id="count">0</span>
+  <span id="window-controls">
+    <button class="win-btn theme" id="btn-theme" title="테마 전환">◐</button>
+    <button class="win-btn minimize" id="btn-minimize" title="최소화">—</button>
+    <button class="win-btn close" id="btn-close" title="종료">✕</button>
+  </span>
 </div>
 <div id="container">
   <div class="warn-bar" id="warn-bar">스캐너 확인 필요 — 연속 실패</div>
@@ -190,20 +254,28 @@
   <div id="grid"></div>
   <div id="status-msg" style="display:none"></div>
 </div>
+<div id="toast"></div>
 <script>
 const params = new URLSearchParams(location.search);
 const POLL_INTERVAL = parseInt(params.get('interval') || '3');
 const OPACITY = parseFloat(params.get('opacity') || '0.88');
+const THEME = params.get('theme') || 'dark';
+const SOUND_ALERT = params.get('sound') !== 'false';
 
-// 배경 투명도 적용
-document.documentElement.style.setProperty('--bg', `rgba(20,22,28,${OPACITY})`);
+// 테마 적용
+document.documentElement.setAttribute('data-theme', THEME);
+document.documentElement.style.setProperty('--bg',
+  THEME === 'light' ? `rgba(245,246,248,${OPACITY})` : `rgba(20,22,28,${OPACITY})`);
 
-let lastPorts = new Map();      // key -> card element
-let expandedSet = new Set();     // expanded "port:family" keys
+let lastPorts = new Map();
+let expandedSet = new Set();
 let searchQuery = '';
 let scanInProgress = false;
 let failCount = 0;
 let closedListOpen = false;
+let favorites = new Set();    // 고정할 포트 번호
+let prevPortKeys = new Set(); // 이전 스캔의 포트 키 (새 포트 감지용)
+let currentTheme = THEME;
 
 const grid = document.getElementById('grid');
 const statusMsg = document.getElementById('status-msg');
@@ -214,13 +286,30 @@ const statusDot = document.getElementById('status-dot');
 const closedToggle = document.getElementById('closed-toggle');
 const closedListEl = document.getElementById('closed-list');
 const closedCountEl = document.getElementById('closed-count');
+const toastEl = document.getElementById('toast');
+
+// 창 제어 버튼
+document.getElementById('btn-close').addEventListener('click', () => {
+  if (window.close_window) close_window();
+});
+document.getElementById('btn-minimize').addEventListener('click', () => {
+  if (window.minimize_window) minimize_window();
+  else { document.getElementById('container').style.display = 'none'; }
+});
+document.getElementById('btn-theme').addEventListener('click', () => {
+  currentTheme = currentTheme === 'dark' ? 'light' : 'dark';
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  document.documentElement.style.setProperty('--bg',
+    currentTheme === 'light' ? `rgba(245,246,248,${OPACITY})` : `rgba(20,22,28,${OPACITY})`);
+  if (window.save_setting) save_setting('theme', currentTheme);
+  showToast(currentTheme === 'dark' ? '다크 테마' : '라이트 테마');
+});
 
 closedToggle.addEventListener('click', () => {
   closedListOpen = !closedListOpen;
   closedToggle.classList.toggle('open', closedListOpen);
   closedListEl.classList.toggle('open', closedListOpen);
 });
-
 
 searchEl.addEventListener('input', () => {
   searchQuery = searchEl.value.trim().toLowerCase();
@@ -238,6 +327,44 @@ function applyFilter() {
 }
 
 function cardKey(p) { return `${p.port}:${p.family}`; }
+
+function showToast(msg) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), 2000);
+}
+
+function copyToClipboard(text) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('복사됨: ' + text);
+  }).catch(() => {
+    // 폴백
+    const ta = document.createElement('textarea');
+    ta.value = text;
+    document.body.appendChild(ta);
+    ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast('복사됨: ' + text);
+  });
+}
+
+function playAlertSound() {
+  if (!SOUND_ALERT) return;
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    osc.frequency.value = 880;
+    osc.type = 'sine';
+    gain.gain.setValueAtTime(0.1, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.15);
+    osc.start();
+    osc.stop(ctx.currentTime + 0.15);
+  } catch (e) {}
+}
 
 function render(snapshot) {
   if (snapshot.error) {
@@ -260,6 +387,20 @@ function render(snapshot) {
   const ports = snapshot.ports || [];
   const newKeys = new Set(ports.map(cardKey));
 
+  // 새 포트 감지 (이전에 없던 포트)
+  const trulyNew = [];
+  for (const p of ports) {
+    const key = cardKey(p);
+    if (!prevPortKeys.has(key) && prevPortKeys.size > 0) {
+      trulyNew.push(p);
+    }
+  }
+  if (trulyNew.length > 0) {
+    playAlertSound();
+    showToast(`새 포트: ${trulyNew.map(p => p.port).join(', ')}`);
+  }
+  prevPortKeys = newKeys;
+
   // 사라진 포트 페이드아웃
   for (const [key, el] of lastPorts) {
     if (!newKeys.has(key)) {
@@ -271,6 +412,14 @@ function render(snapshot) {
     }
   }
 
+  // 즐겨찾기 포트를 상단으로 정렬
+  ports.sort((a, b) => {
+    const aPin = favorites.has(a.port);
+    const bPin = favorites.has(b.port);
+    if (aPin !== bPin) return aPin ? -1 : 1;
+    return a.port - b.port;
+  });
+
   // 새/변경 포트
   for (const p of ports) {
     const key = cardKey(p);
@@ -280,6 +429,9 @@ function render(snapshot) {
       grid.appendChild(el);
       lastPorts.set(key, el);
       el.classList.add('new');
+      if (trulyNew.some(t => cardKey(t) === key)) {
+        el.classList.add('alert-new');
+      }
     } else {
       updateCard(el, p);
     }
@@ -294,9 +446,7 @@ function render(snapshot) {
     statusMsg.style.display = 'none';
   }
 
-  // 꺼진 포트 렌더
   renderClosed(snapshot.closed_ports || []);
-
   applyFilter();
 }
 
@@ -340,8 +490,8 @@ function createCard(p) {
   el.className = 'card';
   updateCard(el, p);
   el.addEventListener('click', (e) => {
-    // 검색창 클릭은 무시
-    if (e.target.tagName === 'INPUT') return;
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+    if (e.target.classList.contains('pin-btn') || e.target.classList.contains('card-port')) return;
     const key = cardKey(p);
     if (expandedSet.has(key)) {
       expandedSet.delete(key);
@@ -359,15 +509,20 @@ function updateCard(el, p) {
   const key = cardKey(p);
   el.dataset.port = String(p.port);
   el.dataset.proc = p.process;
+  const isPinned = favorites.has(p.port);
+  if (isPinned) el.classList.add('pinned');
+  else el.classList.remove('pinned');
   const protoBadge = `<span class="badge ${p.protocol}">${p.protocol}</span>`;
   const famBadge = p.family === 'ipv6' ? `<span class="badge ipv6">v6</span>` : '';
   const permBadge = p.permission === 'full' ? '' :
     `<span class="badge ${p.permission}">${p.permission === 'denied' ? '권한부족' : '제한'}</span>`;
+  const pinBtn = `<button class="pin-btn" onclick="togglePin(${p.port}, event)" title="고정">${isPinned ? '📌' : '○'}</button>`;
   const detail = expandedSet.has(key) ? buildDetail(p) : '';
   el.innerHTML = `
     <div class="card-head">
-      <span class="card-port">${p.port}</span>
+      <span class="card-port" onclick="copyPort(${p.port}, event)" title="클릭하여 복사">${p.port}</span>
       <span class="card-proc">${escapeHtml(p.process)}</span>
+      ${pinBtn}
       ${protoBadge}${famBadge}${permBadge}
     </div>
     <div class="card-detail">${detail}</div>
@@ -390,6 +545,25 @@ function buildDetail(p) {
   `;
 }
 
+function togglePin(port, event) {
+  if (event) event.stopPropagation();
+  if (favorites.has(port)) {
+    favorites.delete(port);
+    showToast('고정 해제: ' + port);
+  } else {
+    favorites.add(port);
+    showToast('고정: ' + port);
+  }
+  if (window.save_setting) save_setting('favorites', [...favorites]);
+  // 재렌더
+  poll();
+}
+
+function copyPort(port, event) {
+  if (event) event.stopPropagation();
+  copyToClipboard(String(port));
+}
+
 async function killPort(pid, event) {
   if (event) event.stopPropagation();
   if (!confirm('PID ' + pid + ' 프로세스를 종료하시겠습니까?')) return;
@@ -404,7 +578,7 @@ async function killPort(pid, event) {
     const data = await r.json();
     if (data.ok) {
       if (resultEl) { resultEl.textContent = '✓ 종료됨'; resultEl.className = 'kill-result ok'; }
-      setTimeout(() => poll(), 500);  // 즉시 갱신
+      setTimeout(() => poll(), 500);
     } else {
       const hint = data.hint ? ' (' + data.hint + ')' : '';
       if (resultEl) {

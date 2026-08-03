@@ -20,6 +20,9 @@ CONFIG_FILE = CONFIG_DIR / "config.json"
 DEFAULT_CONFIG = {
     "x": 2640, "y": 100, "width": 320, "height": 480,
     "on_top": True, "click_through": False, "interval": 3,
+    "theme": "dark",           # dark | light
+    "favorites": [],           # 고정할 포트 리스트 [3000, 8080, ...]
+    "sound_alert": True,        # 새 포트 점유 시 사운드 알림
 }
 
 
@@ -33,6 +36,10 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--no-on-top", action="store_true", help="Disable always-on-top")
     p.add_argument("--click-through", action="store_true",
                    help="Widget click-through mode (mouse events pass through)")
+    p.add_argument("--theme", default=None, choices=["dark", "light"],
+                   help="Color theme (default: dark)")
+    p.add_argument("--no-sound", action="store_true",
+                   help="Disable sound alert on new port")
     args = p.parse_args()
     if args.interval is not None and not (1 <= args.interval <= 30):
         p.error("--interval must be 1-30")
@@ -76,6 +83,10 @@ def main() -> None:
         cfg["on_top"] = False
     if args.click_through:
         cfg["click_through"] = True
+    if args.theme:
+        cfg["theme"] = args.theme
+    if args.no_sound:
+        cfg["sound_alert"] = False
 
     # 백엔드 HTTP 서버 (백그라운드 스레드)
     server = PortMapServer(port=args.port, preferred_scanner=args.scanner)
@@ -83,8 +94,14 @@ def main() -> None:
     actual_port = server.actual_port
     print(f"[Port Map] server on http://127.0.0.1:{actual_port}", flush=True)
 
-    params = f"?interval={cfg['interval']}&opacity={args.opacity}"
-    url = f"http://127.0.0.1:{actual_port}/{params}"
+    import urllib.parse
+    qp = urllib.parse.urlencode({
+        "interval": cfg["interval"],
+        "opacity": args.opacity,
+        "theme": cfg.get("theme", "dark"),
+        "sound": str(cfg.get("sound_alert", True)).lower(),
+    })
+    url = f"http://127.0.0.1:{actual_port}/?{qp}"
 
     window = webview.create_window(
         title="Port Map",
@@ -124,6 +141,41 @@ def main() -> None:
                 )
             except Exception:
                 pass
+        # 창 제어 API 노출 (JS에서 호출 가능)
+        window.expose(close_window, minimize_window, toggle_on_top, save_setting)
+
+    # ── 창 제어 API (JS에서 호출) ──
+    def close_window():
+        """위젯 종료."""
+        try:
+            window.destroy()
+        except Exception:
+            pass
+
+    def minimize_window():
+        """창 최소화/숨기기."""
+        try:
+            window.hide()
+        except Exception:
+            pass
+
+    def toggle_on_top():
+        """항상 위 토글."""
+        try:
+            window.on_top = not getattr(window, '_on_top', True)
+            return window.on_top
+        except Exception:
+            return None
+
+    def save_setting(key, value):
+        """설정 저장 (favorites, theme, sound_alert 등)."""
+        try:
+            new_cfg = dict(cfg)
+            new_cfg[key] = value
+            save_config(new_cfg)
+            return True
+        except Exception:
+            return False
 
     def on_closed():
         # 위치/크기 저장

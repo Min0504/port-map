@@ -2,6 +2,17 @@
 # Port Map — 전역 실행 래퍼
 # 설치: ./install.sh  (또는 수동: ln -sf "$PWD/bin/portmap" ~/.local/bin/portmap)
 # 이후 터미널에서 `portmap` 입력 즉시 위젯 실행.
+#
+# 사용법:
+#   portmap                    # 위젯 실행 (기본 설정)
+#   portmap --interval 5       # 5초 폴링
+#   portmap --no-on-top        # 항상 위 해제
+#   portmap --theme light      # 라이트 테마
+#   portmap --click-through    # 클릭통과 위젯 모드
+#   portmap --no-sound         # 알림 사운드 끄기
+#   portmap kill <PID>         # 프로세스 종료 (서버 불필요)
+#   portmap ports              # 현재 포트 목록만 출력 (CLI 모드)
+#   portmap --help             # 도움말
 
 set -e
 
@@ -26,7 +37,6 @@ else
         echo "✗ Python 3가 필요합니다. https://python.org"
         exit 1
     fi
-    # 의존성 확인
     "$PYTHON" -c "import webview" 2>/dev/null || {
         echo "✗ pywebview가 설치되어 있지 않습니다."
         echo "  cd $PROJECT_DIR && ./install.sh  실행 후 다시 시도하세요."
@@ -35,4 +45,68 @@ else
 fi
 
 cd "$PROJECT_DIR"
+
+# CLI 서브명령어 처리 (위젯 띄우지 않고 터미널에서 바로 실행)
+case "${1:-}" in
+    ports)
+        # 포트 목록만 출력
+        exec "$PYTHON" -c "
+from scanners import scan
+import json
+snap = scan()
+for p in snap['ports']:
+    print(f\"{p['port']:>6}  {p['protocol']:>3}  {p['process']}\")
+print(f'--- {snap[\"count\"]} ports ({snap[\"scanner\"]}) ---')
+"
+        ;;
+    kill)
+        shift
+        if [ -z "$1" ]; then
+            echo "사용법: portmap kill <PID>"
+            exit 1
+        fi
+        exec "$PYTHON" -c "
+import os, signal, sys
+pid = int(sys.argv[1])
+try:
+    os.kill(pid, signal.SIGTERM)
+    print(f'✓ PID {pid} 종료 요청 전송')
+except ProcessLookupError:
+    print(f'✗ PID {pid} 없음')
+except PermissionError:
+    print(f'✗ 권한 부족 — sudo 필요')
+" "$1"
+        ;;
+    --help|-h)
+        cat << HELP
+Port Map — 로컬 포트 점유 현황 데스크톱 위젯
+
+사용법:
+  portmap                    위젯 실행 (기본 설정)
+  portmap ports              포트 목록만 터미널에 출력 (CLI)
+  portmap kill <PID>         프로세스 종료 (CLI, 위젯 불필요)
+
+옵션:
+  --interval <초>            폴링 주기 (1~30, 기본 3)
+  --opacity <0.6~0.95>       창 투명도 (기본 0.85)
+  --theme <dark|light>       테마 (기본 dark)
+  --scanner <auto|psutil|lsof|netstat>  스캐너 지정
+  --no-on-top                항상 위 해제
+  --click-through            클릭통과 위젯 모드
+  --no-sound                 알림 사운드 끄기
+  --port <포트>              HTTP 바인딩 포트 (0=자동)
+  -h, --help                 이 도움말
+
+예제:
+  portmap --interval 5 --theme light
+  portmap ports
+  portmap kill 12345
+
+프로젝트: https://github.com/Min0504/port-map
+HELP
+        exit 0
+        ;;
+esac
+
+# 기본: 위젯 실행
 exec "$PYTHON" app.py "$@"

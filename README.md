@@ -17,6 +17,11 @@
 - **포트 연결 해제** — 클릭 한 번으로 프로세스 종료 (SIGTERM)
 - **위치 기억** — 재실행 시 마지막 위치/크기 복원
 - **최근 사용 포트 표시** — 꺼진 포트도 "최근 사용된 포트" 섹션에서 확인 (last-seen 시간 표시)
+- **창 제어 버튼** — 끄기(✕), 최소화(—), 테마 전환(◐) 버튼 (macOS 스타일)
+- **포트 즐겨찾기 고정** — 자주 보는 포트를 📌 고정하면 상단에 항상 표시
+- **포트번호 복사** — 포트번호 클릭하면 클립보드에 복사
+- **다크/라이트 테마** — 테마 버튼으로 즉시 전환, 설정에 저장
+- **새 포트 알림** — 새로 점유된 포트 감지 시 사운드 + 시각 하이라이트
 - **크로스플랫폼** — macOS, Windows, Linux
 
 ## 빠른 시작
@@ -63,8 +68,19 @@ PATH에 `~/.local/bin`이 있으면 어디서든 `portmap` 입력으로 바로 �
 
 ```bash
 portmap              # 위젯 실행
-portmap --interval 5 # 폴링 5초
-portmap --no-on-top  # 항상 위 해제
+portmap ports        # 포트 목록만 터미널에 출력 (CLI 모드)
+portmap kill <PID>   # 프로세스 종료 (위젯 불필요)
+portmap --help       # 도움말
+```
+
+위젯 옵션:
+
+```bash
+portmap --interval 5       # 폴링 5초
+portmap --theme light      # 라이트 테마
+portmap --no-on-top        # 항상 위 해제
+portmap --no-sound         # 알림 사운드 끄기
+portmap --click-through    # 클릭통과 위젯 모드
 ```
 
 `~/.local/bin`이 PATH에 없다면:
@@ -88,6 +104,8 @@ source ~/.zshrc
 | `--port` | 0 | HTTP 바인딩 포트 (0=자동) |
 | `--no-on-top` | false | 항상 위 해제 |
 | `--click-through` | false | 위젯 클릭통과 모드 |
+| `--theme` | dark | dark / light 테마 |
+| `--no-sound` | false | 새 포트 알림 사운드 끄기 |
 
 환경변수: `PORT_MAP_INTERVAL` (폴링 주기)
 
